@@ -2,10 +2,10 @@
 Mycroft core with intent succeed/fail tests
 
 ## About 
-In standard Mycroft all intents succeed. This is an extendion that allows an intent to fail, in which case another intent matching the utterance can be tried. 
+In standard Mycroft all intents succeed. This is an extension that allows an intent to fail, in which case another intent matching the utterance can be tried. 
 
 ## Status
-Alpha - still has some bugs
+Alpha - still has some bugs.
 No tests are currently included
 
 ## Files

@@ -313,7 +313,7 @@ class IntentService(object):
         
         # code borrowed from get_scheduled_event_status() in core.py
         completed_callback = False
-        completed_status = 'succeeded' # assume success
+        completed_status = 'failed' # assume fail
 
         def completion_handler(message):  #JN
             nonlocal completed_callback
@@ -325,7 +325,17 @@ class IntentService(object):
                 completed_status = message.data['status']
                 LOG.info('Completed status is ' + completed_status)
             completed_callback = True
-        
+
+        def wait_for_reply():
+            nonlocal completed_callback
+            num_tries = 0 # wait upto 5 secs
+
+            while completed_callback is False and num_tries < 50:
+                #LOG.info('Sleepiong')
+                time.sleep(0.1)
+                num_tries += 1
+            completed_callback = False # for next time
+            
         try:
             # Get language of the utterance
             lang = message.data.get('lang', "en-us")
@@ -380,11 +390,13 @@ class IntentService(object):
                 LOG.info('Reply put on bus')
                 self.send_metrics(intent, message.context, stopwatch)
 
+                wait_for_reply()
 
-                while completed_callback is False:
-                    #LOG.info('Sleepiong')
-                    time.sleep(0.1)
-                
+                #while completed_callback is False:
+                #    #LOG.info('Sleepiong')
+                #    time.sleep(0.1)
+
+                #completed_callback = False # for next time
                 LOG.info('Intent status is ' + completed_status)    
                 if completed_status == 'succeeded':
                     LOG.info('intentn completed ok')
@@ -575,3 +587,4 @@ class IntentService(object):
     def handle_clear_context(self, message):
         """ Clears all keywords from context """
         self.context_manager.clear_context()
+
