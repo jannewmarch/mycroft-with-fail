@@ -1,0 +1,7 @@
+I'm doing a skill for Yeelight smart lights. There are already skills for Hue lights, LIFX and no doubt there will be many more. Most of them will recognise "Turn on the lounge light" and similar. If I have two or more light types, then some will belong to one skill, others to different skills. But when I ask for a light to go on, I don't want it to only match one skill, but to try all possibilities until it gets the one managing the right room. Otherwise it could fail on one skill (no room matching lounge, only bedroom) while another one should succeed (the one with the lounge light). This is really a generic problem for multiple suppliers of common functionality.
+
+The code in intent_service.py calls determine_intent() from adapt.engine's IntentDeterminationEngine which eventually calls _best_intent() i.e it only returns one match, the one with the highest confidence.
+
+A non-solution is to ensure each skill has disjoint vocabulary - then as a user I would have to remember  which room has which type of light and its associated vocabulary while the developers would have to ensure disjointness, which is probably impossible.
+
+Alternatively, can _best_intent() act as a generator, returning successive "best" matches each time (of course, confidence greater than some threshold). Also for an intent to be able to signal in code that it has has failed so that another intent can be called. There's a heap of changes in that - is there a better way?
