@@ -718,7 +718,6 @@ class MycroftSkill(object):
         """
 
         def wrapper(message):
-            print(message.serialize(),  file=open('/tmp/wrapper_msg.txt', 'w+')) #JN
             skill_data = {'name': get_handler_name(handler)}
             stopwatch = Stopwatch()
             try:
@@ -738,33 +737,24 @@ class MycroftSkill(object):
                     if len(signature(handler).parameters) == 0:
                         handler()
                     else:
-                        # JN: call handler and check yes/no
+                        # JN: call handler and check succeed/fail
+                        # Emit status message if retry_on_fail in original msg
+                        # ? can this be merged with fallback handler code
+                        #   which also checks succeed/fail ???
                         if handler(message) != None:
-                            LOG.info("Intent failed: " + get_handler_name(handler))
-                            print("Intent failed " + message.serialize(),
-                                  file=open('/tmp/wrapper_detail.txt', 'a+')) #JN
+                            LOG.debug("Intent failed: " + get_handler_name(handler))
                             if 'retry_on_fail' in message.data:
-                                LOG.info('Intent failed with retry_on_fail')
+                                LOG.debug('Intent failed with retry_on_fail')
                                 self.bus.emit(Message('skill.handler.complete',
                                                       data = {'status': 'failed'}))
-                            #self.schedule_event(None, 0, 'fail')
                         else:
-                            #LOG.info("Intent succeeded: " + get_handler_name(handler))
-                            #self.schedule_event(None, 0, 'succeed')
-                            print("Intent succededed " + message.serialize(),
-                                  file=open('/tmp/wrapper_detail.txt', 'a+')) #JN
-                            print("  type is " + str(type(message)),
-                                  file=open('/tmp/wrapper_detail.txt', 'a+')) #JN
-
+                            LOG.debug("Intent succeeded: " + get_handler_name(handler))
                             if message.data is not None and \
                                isinstance(message.data, dict) and \
                                'retry_on_fail' in message.data:
-                                LOG.info('Intent succeeded with retry_on_fail')
-                                print("    succededed with retry on fail " + message.serialize(),
-                                  file=open('/tmp/wrapper_detail.txt', 'a+')) #JN
+                                LOG.debug('Intent succeeded with retry_on_fail')
                                 self.bus.emit(Message('skill.handler.complete',
                                                       data = {'status': 'succeeded'}))
-
 
                     self.settings.store()  # Store settings if they've changed
 

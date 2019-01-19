@@ -13,7 +13,6 @@
 # limitations under the License.
 #
 import time
-import json # JN
 from adapt.context import ContextManagerFrame
 from adapt.engine import IntentDeterminationEngine
 from adapt.intent import IntentBuilder
@@ -152,9 +151,6 @@ class ContextManager(object):
 
 class IntentService(object):
     def __init__(self, bus):
-        LOG.info("Bus is " + str(type(bus))) #JN
-        print("Bus is " + str(type(bus)),  file=open('/tmp/bus.txt', 'w')) #JN
-
         self.config = Configuration.get().get('context', {})
         self.engine = IntentDeterminationEngine()
 
@@ -311,7 +307,7 @@ class IntentService(object):
             message (Message): The messagebus data
         """
         
-        # code borrowed from get_scheduled_event_status() in core.py
+        # JN: Code borrowed from get_scheduled_event_status() in core.py
         completed_callback = False
         completed_status = 'failed' # assume fail
 
@@ -326,7 +322,7 @@ class IntentService(object):
                 LOG.info('Completed status is ' + completed_status)
             completed_callback = True
 
-        def wait_for_reply():
+        def wait_for_reply():             #JN
             nonlocal completed_callback
             num_tries = 0 # wait upto 5 secs
 
@@ -343,16 +339,16 @@ class IntentService(object):
 
             self.bus.on('skill.handler.complete', completion_handler)
 
-            # stopwatch doesn't seem to be used, so removed the with stopwatch...
+            #JN:  stopwatch doesn't seem to be used, so removed the with stopwatch...
             stopwatch = Stopwatch()
 
-            # Give active skills an opportunity to handle the utterance
+            #JN:  Give active skills an opportunity to handle the utterance
             converse = self._converse(utterances, lang)
 
-            # code moved to here, finishes the converse stuff 
+            #JN:  code moved to here, finishes the converse stuff 
             if converse:
                 # Report that converse handled the intent and return
-                LOG.info('Converse handling intent')
+                LOG.debug('Converse handling intent')
                 ident = message.context['ident'] if message.context else None
                 report_timing(ident, 'intent_service', stopwatch,
                               {'intent_type': 'converse'})
@@ -360,23 +356,15 @@ class IntentService(object):
 
             # if not converse: - redundant
             # No conversation, use intent system to handle utterance
-            #intent = self._adapt_intent_match(utterances, lang)
-            #intent = next(self._adapt_intent_match(utterances, lang)) # JN uses generator
-            LOG.info("Getting intents from loop")
             for intent in self._adapt_intent_match(utterances, lang): # JN uses generator
-                LOG.info('Got intent in for loop')
-                print("Got intent " + str(intent),  file=open('/tmp/intent.txt', 'a+')) #JN
-
                 padatious_intent = PadatiousService.instance.calc_intent(
                     utterances[0])
  
                 if intent and not (padatious_intent and
                                    padatious_intent.conf >= 0.95):
-                    LOG.info('Intnet and not pedatious')
                     # Send the message to the Adapt intent's handler unless
                     # Padatious is REALLY sure it was directed at it instead.
                     reply = message.reply(intent.get('intent_type'), intent)
-                    LOG.info(' Mesage reply is ' + str(reply))
                 else:
                     # Allow fallback system to handle utterance
                     # NOTE: Padatious intents are handled this way, too
@@ -384,26 +372,16 @@ class IntentService(object):
                     reply = message.reply('intent_failure',
                                           {'utterance': utterances[0],
                                            'lang': lang})
-                #LOG.info('Putting on bus ' + str(intent.get('intent_type'))) #type(reply))) #str(reply.serialize()))
-                LOG.info('Putting reply on bus')
                 self.bus.emit(reply)
-                LOG.info('Reply put on bus')
                 self.send_metrics(intent, message.context, stopwatch)
 
                 wait_for_reply()
 
-                #while completed_callback is False:
-                #    #LOG.info('Sleepiong')
-                #    time.sleep(0.1)
-
-                #completed_callback = False # for next time
-                LOG.info('Intent status is ' + completed_status)    
                 if completed_status == 'succeeded':
-                    LOG.info('intentn completed ok')
                     # we are finished now with this utterance
                     return;
                 else:
-                    LOG.info('intent failed, trying next one')
+                    LOG.debug('intent failed, trying next one')
 
             LOG.info('Intent loop finished')
             # we couldn't find a successful handler
@@ -464,28 +442,15 @@ class IntentService(object):
                 #    include_tags=True,
                 #    context_manager=self.context_manager))
                 # TODO - Should Adapt handle this?
+
                 # JN changed from next(determine_intent), single value only
-                #for best_intent in self.engine.determine_intent(  
                 for best_intent in self.engine.determine_good_intents(  
                         normal_utterance, 100,
                         include_tags=True,
                         context_manager=self.context_manager):
-                    print(json.dumps(best_intent, indent = 4),  file=open('/tmp/all_intents.txt', 'a+'))
- 
-                    
- 
-                for best_intent in self.engine.determine_good_intents(  
-                        normal_utterance, 100,
-                        include_tags=True,
-                        context_manager=self.context_manager):
-                    LOG.info('adapt intent match, top of for loop')
                     best_intent['utterance'] = utterance
                     best_intent['retry_on_fail'] = True #JN
-                    print(json.dumps(best_intent, indent = 4),  file=open('/tmp/log.txt', 'a+'))
-                    LOG.info('Best intent: ' + json.dumps(best_intent))
 
-                    # self.bus.on('skill.handler.complete', completion_handler)
-                    
                     if best_intent and best_intent.get('confidence', 0.0) > 0.0:
                         best_intent['utterance'] = utterance
                         self.update_context(best_intent)
@@ -498,9 +463,7 @@ class IntentService(object):
                             best_intent = workaround_one_of_context(best_intent)
                         except LookupError:
                             LOG.error('Error during workaround_one_of_context')
-                        #return best_intent
-                        yield best_intent # JN - keep this!
-                #return [best_intent]
+                        yield best_intent # JN
                     
             except StopIteration:
                 # don't show error in log
@@ -508,22 +471,6 @@ class IntentService(object):
             except Exception as e:
                 LOG.exception(e)
                 continue
-
-        '''    
-        if best_intent and best_intent.get('confidence', 0.0) > 0.0:
-            self.update_context(best_intent)
-            # update active skills
-            skill_id = best_intent['intent_type'].split(":")[0]
-            self.add_active_skill(skill_id)
-            # adapt doesn't handle context injection for one_of keywords
-            # correctly. Workaround this issue if possible.
-            try:
-                best_intent = workaround_one_of_context(best_intent)
-            except LookupError:
-                LOG.error('Error during workaround_one_of_context')
-            return best_intent
-        '''
-
 
     def handle_register_vocab(self, message):
         start_concept = message.data.get('start')
@@ -587,4 +534,3 @@ class IntentService(object):
     def handle_clear_context(self, message):
         """ Clears all keywords from context """
         self.context_manager.clear_context()
-

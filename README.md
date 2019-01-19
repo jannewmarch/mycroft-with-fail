@@ -5,8 +5,8 @@ Mycroft core with intent succeed/fail tests
 In standard Mycroft all intents succeed. This is an extension that allows an intent to fail, in which case another intent matching the utterance can be tried. 
 
 ## Status
-Alpha - still has some bugs.
-No tests are currently included
+Beta v0.5
+
 
 ## Files
 * skills/core.py
@@ -75,7 +75,9 @@ Jan Newmarch (jan@newmarch.name)
 
 
 ## Tags
+
 #Mycroft
+
 #Digital assistants
 
 

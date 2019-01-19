@@ -7,7 +7,6 @@ from adapt.tools.text.tokenizer import EnglishTokenizer
 from adapt.tools.text.trie import Trie
 
 from mycroft.util.log import LOG #JN
-import json #JN
 
 __author__ = 'seanfitz'
 
@@ -32,8 +31,8 @@ class IntentDeterminationEngine(pyee.EventEmitter):
         self._regex_strings = set()
         self.tagger = EntityTagger(self.trie, self.tokenizer, self.regular_expressions_entities)
         self.intent_parsers = []
-        print("Using old det engine",  file=open('/tmp/which_intents.txt', 'a+'))
-
+        LOG.info("using new det engine")
+        print("Using new det engine",  file=open('/tmp/which_intents.txt', 'a+'))
 
     def __best_intent(self, parse_result, context=[]):
         best_intent = None
@@ -46,35 +45,6 @@ class IntentDeterminationEngine(pyee.EventEmitter):
                 best_tags = tags
 
         return best_intent, best_tags
-
-    def __good_intents(self, parse_result, include_tags, context=[], confidence = 0.5):  # JN
-        ''' 
-        Return a sorted list (highest first) of intents that meet the confidence level
-        '''
-        best_intent = None
-        best_tags = None
-        good_intents = []
-        good_tags = []
-        context_as_entities = [{'entities': [c]} for c in context]
-        for intent in self.intent_parsers:
-            i, tags = intent.validate_with_tags(parse_result.get('tags') + context_as_entities, parse_result.get('confidence'))
-            if i and i.get('confidence') >= confidence:
-                print("Adding intent " + str(i), file = open('/tmp/oarse_intents.txt', 'a+'))
-                if include_tags:
-                    i['__tags__'] = tags
-                good_intents.append(i)
-
-        good_intents = sorted(good_intents,
-                              key = lambda i: i['confidence'],
-                              reverse = True)
-        if good_intents != []:
-            best_intent = good_intents[0]
-            best_tags = good_intents[0]['__tags__']
-
-        #return best_intent, best_tags
-        return good_intents
-
-
 
     def __get_unused_context(self, parse_result, context):
         tags_keys = set([t['key'] for t in parse_result['tags'] if t['from_context']])
@@ -116,51 +86,6 @@ class IntentDeterminationEngine(pyee.EventEmitter):
                     best_intent['__tags__'] = tags
                 yield best_intent
 
-    def determine_good_intents(self, utterance, num_results=1, include_tags=False, context_manager=None):
-        """
-        Given an utterance, provide a valid intent.
-
-        :param utterance: an ascii or unicode string representing natural language speech
-
-        :param include_tags: includes the parsed tags (including position and confidence)
-            as part of result
-
-        :param context_manager: a context manager to provide context to the utterance
-
-        :param num_results: a maximum number of results to be returned.
-
-        :return: A generator that yields dictionaries.
-        """
-        parser = Parser(self.tokenizer, self.tagger)
-        parser.on('tagged_entities',
-                  (lambda result:
-                   self.emit("tagged_entities", result)))
-
-        context = []
-        if context_manager:
-            context = context_manager.get_context()
-
-        for result in parser.parse(utterance, N=num_results, context=context):
-            LOG.info("Parser got result " + str(result)) #JN
-            self.emit("parse_result", result)
-            # create a context without entities used in result
-            remaining_context = self.__get_unused_context(result, context)
-            #best_intent, tags = self.__best_intent(result, remaining_context) #JN restore this
-            good_intents = self.__good_intents(result, include_tags, remaining_context) #JN
-
-            # change this to loop through list
-            LOG.info("Number of good intents is " + str(len(good_intents)))
-            for best_intent in good_intents:
-                print("Best from det_good ints: " + json.dumps(best_intent, indent = 4),  file=open('/tmp/best_intents.txt', 'a+'))
-                yield best_intent
-                
-            #if good_intents != []:
-            #    best_intent = good_intents[0]
- 
-            #if best_intent and best_intent.get('confidence', 0.0) > 0:
-            #    yield best_intent
-
-                
     def register_entity(self, entity_value, entity_type, alias_of=None):
         """
         Register an entity to be tagged in potential parse results
@@ -233,7 +158,7 @@ class DomainIntentDeterminationEngine(object):
         :param domain: a string representing the domain you wish to add
         """
         self.domains = {}
-        print("Using old domain det engine",  file=open('/tmp/which_intents.txt', 'a+'))
+        print("Using new domian det engine",  file=open('/tmp/which_intents.txt', 'a+'))
 
 
     @property
