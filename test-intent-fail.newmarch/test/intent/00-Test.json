@@ -1,0 +1,4 @@
+{
+  "utterance": "test fail intent",
+  "expected_response_sequence": ["Expected to fail to try next intent", "Expected to succeed"]
+}

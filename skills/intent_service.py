@@ -315,21 +315,25 @@ class IntentService(object):
             nonlocal completed_callback
             nonlocal completed_status
             
-            LOG.info("Calback called: " + message.serialize())
-            LOG.info('   type ' + str(type(message)))
+            LOG.debug("Calback called: " + message.serialize())
+            LOG.debug('   type ' + str(type(message)))
             if message.data is not None:
                 completed_status = message.data['status']
-                LOG.info('Completed status is ' + completed_status)
+                LOG.debug('Completed status is ' + completed_status)
             completed_callback = True
 
         def wait_for_reply():             #JN
             nonlocal completed_callback
-            num_tries = 0 # wait upto 5 secs
+            num_tries = 0 # wait upto 30 secs. weather takes e.g. 8 seconds
 
-            while completed_callback is False and num_tries < 50:
+            LOG.debug('Waiting for reply, completed callback is ' + str(completed_callback))
+
+            while completed_callback is False and num_tries < 300:
                 #LOG.info('Sleepiong')
                 time.sleep(0.1)
                 num_tries += 1
+            LOG.debug('Waited for reply, num_tries is ' +str(num_tries))
+            LOG.debug('   completed callback is ' + str(completed_callback))
             completed_callback = False # for next time
             
         try:
@@ -372,6 +376,7 @@ class IntentService(object):
                     reply = message.reply('intent_failure',
                                           {'utterance': utterances[0],
                                            'lang': lang})
+                LOG.debug('Intent bus call msg ' + reply.serialize())
                 self.bus.emit(reply)
                 self.send_metrics(intent, message.context, stopwatch)
 
@@ -379,9 +384,11 @@ class IntentService(object):
 
                 if completed_status == 'succeeded':
                     # we are finished now with this utterance
+                    LOG.debug('intent succeeded, utterance handled by ' + str(intent))
+                    self.bus.remove('skill.handler.complete', completion_handler)
                     return;
                 else:
-                    LOG.debug('intent failed, trying next one')
+                    LOG.debug('intent failed, trying next one ' + str(intent))
 
             LOG.info('Intent loop finished')
             # we couldn't find a successful handler
@@ -391,6 +398,7 @@ class IntentService(object):
                                   {'utterance': utterances[0],
                                    'lang': lang})
             self.bus.emit(reply)
+            self.bus.remove('skill.handler.complete', completion_handler)
             
         except Exception as e:
             LOG.exception(e)

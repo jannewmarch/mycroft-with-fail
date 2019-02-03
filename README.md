@@ -2,19 +2,21 @@
 Mycroft core with intent succeed/fail tests
 
 ## About 
-In standard Mycroft all intents succeed. This is an extension that allows an intent to fail, in which case another intent matching the utterance can be tried. 
+In standard Mycroft all intents succeed.
+If an intent is chosen as the bext syntactic match, it is the only one tried and will be assumed
+to have succeeded.
+This is an extension that allows an intent to fail, in which case another intent matching the utterance can be tried. 
 
 ## Status
-Beta v0.5
+Beta v0.6
 
 
 ## Files
 * skills/core.py
 * skills/intent_service.py
 * engine.py - replaces .venv/lib/python3.5/site-packages/adapt/engine.py
-* test-intent-fail-1.newmarch - see Testing
-* test-intent-fail-2.newmarch - see Testing
-* test-intent-fail-3.newmarch - see Testing
+* test/integrationtests/skills/skill_tester.py
+* test-intent-fail.newmarch - see Testing
 
 ## Pseudo-code
 The pseudo-code for normal intent selection and execution is
@@ -46,28 +48,19 @@ execute fallback skills
 Current intents (except fallbacks) do not return a value. i.e. they return None. An intent under this scheme is considered to have failed if it returns any value (True, False, etc) except None.
 
 ## Testing
-Three intents are supplied for testing:
+The skill testing system is modified slightly. Usually one would expect a failing test to produce no
+output. For testing, both succeeding and failing skills should produce output so we can check they
+have been called correctly. A new type is added to the test types of
+`"expected_response_sequence"` which takes a list of responses expected. A test succeeds if all
+intents for an utterance are called until one succeeds, and their dialogs match the appropriate
+element of the list. The modifications are in `skill_tester.py`.
 
-* test-intent-fail-1.newmarch
-* test-intent-fail-2.newmarch
-* test-intent-fail-3.newmarch
-
-They must be installed into the directory /opt/mycroft/skills.
-
-They must be loaded into Mycroft in the correct order. To do this, edit mycroft/configuration/mycroft.conf and change the priority list to
-
-    "priority_skills": ["mycroft-pairing", "mycroft-volume",
-                        "test-intent-fail-1.newmarch", "test-intent-fail-2.newmarch", "test-intent-fail-3.newmarch"
-                       ],
-
-Then the query "test fail intent" should produce two responses:
-
-    Expected to fail to try next intent
-    Expected to succeed  
-
-The first should fail allowing the second to try. This should succeed, or a third will be invoked.
-
-
+One skill is added for testing:
+* test-intent-fail.newmarch
+It contains three intents which all respond to the utterance `test fail skill`. The first, `fail_intent` should
+fail with dialog `"Expected to fail to try next intent"`. The second,
+`succeed_intent` should succeed with dialog `"Expected to succeed"`. The third,
+`not_reached_intent` should not be executed. 
 
 
 ## Credits 
